@@ -1,0 +1,54 @@
+---
+- name: Automate tasks on the Azure VM
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache and install Git
+      apt:
+        name:
+          - git
+        state: present
+        update_cache: yes
+
+    - name: Install required packages (unzip and curl)
+      apt:
+        name:
+          - unzip
+          - curl
+        state: present
+
+    - name: Download Terraform
+      get_url:
+        url: "https://releases.hashicorp.com/terraform/1.0.2/terraform_1.0.2_linux_amd64.zip"
+        dest: /tmp/terraform.zip
+
+    - name: Unzip Terraform
+      unarchive:
+        src: /tmp/terraform.zip
+        dest: /tmp
+        remote_src: yes
+
+    - name: Move Terraform binary to /usr/local/bin
+      command: mv /tmp/terraform /usr/local/bin/terraform
+
+    - name: Clone the Terraform GitHub repository
+      git:
+        repo: "https://github.com/Anuaniyammal/Terraform-tasks.git"
+        dest: /tmp/Terraform-tasks
+        version: main
+
+    - name: Change directory to "Windows VM" folder and execute Terraform scripts
+      shell: |
+        cd /tmp/Terraform-tasks/Windows\ VM
+        terraform init
+        terraform apply -auto-approve
+      register: terraform_output
+
+    - name: Capture the Terraform output
+      debug:
+        msg: "{{ terraform_output.stdout }}"
+
+    - name: Cleanup cloned files (delete the repository folder)
+      file:
+        path: /tmp/Terraform-tasks
+        state: absent
